@@ -15,6 +15,15 @@ For Windows and Windows [AVX2](https://en.wikipedia.org/wiki/Advanced_Vector_Ext
     to a Python v3.8+ binary, i.e. in your path or as default python install). 
     Depot_tools bundles an appropriate version of Python in `$depot_tools/python-bin`, 
     if you don't have an appropriate version already on your system.
+*   Required Ubuntu packages:
+    ```shell
+    sudo apt-get install -y \
+      automake autoconf build-essential curl xz-utils squashfs-tools p7zip-full \
+      git python3 python3-pkgconfig python3-virtualenv python3-oauth2client python3-oauthlib \
+      perl gcc g++ bison flex gperf pkg-config dbus icoutils \
+      libnss3 libasound2 libglib2.0-0 libgtk-3-0 libnspr4 libfreetype6 libcairo2 \
+      xvfb x11-utils
+    ```
 
 Most development is done on Ubuntu 22.04, Jammy Jellyfish (This is what Chromium's build infrastructure currently runs). 
 Ubuntu 16.04/18.04 no longer works. 20.04 and Debian 10/11/12 will work.
