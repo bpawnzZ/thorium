@@ -1,0 +1,84 @@
+name: Build Thorium
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          automake autoconf build-essential curl xz-utils squashfs-tools p7zip-full \
+          git python3 python3-pkgconfig python3-virtualenv python3-oauth2client python3-oauthlib \
+          perl gcc g++ bison flex gperf pkg-config dbus icoutils \
+          libnss3 libasound2 libglib2.0-0 libgtk-3-0 libnspr4 libfreetype6 libcairo2 \
+          xvfb xdpyinfo ccache
+        
+    - name: Setup depot_tools
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
+        
+    - name: Setup ccache
+      uses: actions/cache@v3
+      with:
+        path: ~/.ccache
+        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-
+          
+    - name: Configure environment
+      run: |
+        export CCACHE_BASEDIR="$GITHUB_WORKSPACE"
+        export CCACHE_SLOPPINESS="include_file_mtime"
+        export CCACHE_MAXSIZE="10G"
+        
+    - name: Fetch Chromium
+      run: |
+        mkdir chromium && cd chromium
+        fetch --nohooks --no-history chromium
+        cd src
+        
+    - name: Install build deps
+      run: |
+        ./build/install-build-deps.sh --no-nacl
+        gclient runhooks
+        
+    - name: Setup Thorium
+      run: |
+        cd $GITHUB_WORKSPACE
+        ./trunk.sh
+        ./version.sh
+        ./setup.sh
+        
+    - name: Configure build
+      run: |
+        cd $GITHUB_WORKSPACE/chromium/src
+        gn gen out/thorium --args='is_debug=false is_official_build=true symbol_level=1 blink_symbol_level=0 use_thin_lto=true thin_lto_enable_optimizations=true enable_remoting=false enable_resource_allowlist_generation=false use_sysroot=false use_ccache=true cc_wrapper="ccache"'
+        
+    - name: Build Thorium
+      run: |
+        cd $GITHUB_WORKSPACE/chromium/src
+        autoninja -C out/thorium chrome chrome_sandbox chromedriver thorium_shell -j$(nproc)
+        
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: thorium-build
+        path: |
+          ${{ github.workspace }}/chromium/src/out/thorium/thorium
+          ${{ github.workspace }}/chromium/src/out/thorium/chrome_sandbox
+          ${{ github.workspace }}/chromium/src/out/thorium/chromedriver
+          ${{ github.workspace }}/chromium/src/out/thorium/thorium_shell
