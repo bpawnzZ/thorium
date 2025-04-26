@@ -73,12 +73,20 @@ jobs:
         cd $GITHUB_WORKSPACE/chromium/src
         autoninja -C out/thorium chrome chrome_sandbox chromedriver thorium_shell -j$(nproc)
         
+    - name: Verify Build
+      run: |
+        cd $GITHUB_WORKSPACE/chromium/src/out/thorium
+        ./thorium --version
+        ./chromedriver --version
+        
+    - name: Compress Artifacts
+      run: |
+        cd $GITHUB_WORKSPACE/chromium/src/out/thorium
+        tar czf thorium-build.tar.gz thorium chrome_sandbox chromedriver thorium_shell
+        
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: thorium-build
-        path: |
-          ${{ github.workspace }}/chromium/src/out/thorium/thorium
-          ${{ github.workspace }}/chromium/src/out/thorium/chrome_sandbox
-          ${{ github.workspace }}/chromium/src/out/thorium/chromedriver
-          ${{ github.workspace }}/chromium/src/out/thorium/thorium_shell
+        path: ${{ github.workspace }}/chromium/src/out/thorium/thorium-build.tar.gz
+        retention-days: 7
